@@ -10,6 +10,8 @@ This repository defines the public website and customer experience, separate fro
 - docs/04-public-api-contract.md
 - docs/05-privacy-security.md
 - docs/06-mvp-roadmap.md
+- docs/07-genspark-execution-runbook.md
+- docs/08-premium-ui-system.md
 
 ## Purpose
 Explain services, collect a useful customer brief, show safe request status, and deliver approved work securely.
