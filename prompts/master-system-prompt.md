@@ -50,6 +50,13 @@ Implement and connect the following pages as appropriate for the MVP:
 - Do not imply production started before the internal system accepts the request.
 - Do not expose internal prompts, operator notes, provider logs, internal IDs, stack traces or secret environment variables.
 
+
+### Premium visual and interaction standard
+
+Read `docs/08-premium-ui-system.md` before building. Create an editorial, premium Indonesian service website using a coherent design system: warm neutral canvas, deep ink typography, restrained forest-green primary and subtle lime accent; clear type scale; consistent spacing/radii; generous but purposeful whitespace; restrained borders/shadows; polished responsive navigation, service cards, process timeline, examples, form steps, status views and footer. Avoid generic purple AI gradients, glowing orbs, excessive glassmorphism, emoji icons, fake dashboard imagery, fabricated social proof, oversized empty hero sections and template-looking layouts.
+
+Treat visual design as a product requirement, not a finishing pass. Build every route with loading, empty, validation, error, success and connector-unavailable states. Use Indonesian-first copy, accessible semantic HTML, keyboard focus, reduced-motion support and 320px mobile layouts. Prefer a coherent, small component system over a pile of one-off CSS. Do not add decorative UI that makes an unavailable capability look live. Do not mark the UX complete without a real build/test and a page-by-page visual review on mobile and desktop.
+
 ## 6. Integration boundary
 Follow `docs/04-public-api-contract.md`. Public frontend must call a server-side endpoint; that server-side layer calls only the narrow authenticated connector. The browser must never hold the internal service token or direct privileged access to D1/R2.
 
