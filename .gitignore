@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+.dev.vars
+.wrangler/
+*.log
+.DS_Store
+*.bak
+*.backup
+*.tar.gz
+*.zip
+coverage/
+core
+core.*
