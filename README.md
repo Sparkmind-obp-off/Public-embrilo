@@ -5,7 +5,7 @@ Website publik Embrilo, dikembangkan terpisah dari operasional internal Embrilo 
 **Tujuan:** menjelaskan layanan paket konten short-form secara jujur dan membantu calon pelanggan menyusun brief yang jelas.
 
 ## URL
-- **Produksi (Cloudflare Pages):** lihat bagian *Deployment* di bawah
+- **Produksi (Cloudflare Pages):** https://embrilo-public.pages.dev
 - **GitHub:** https://github.com/Sparkmind-obp-off/Public-embrilo
 
 ## Stack
@@ -59,6 +59,7 @@ npm run check       # semuanya
 ## Deployment
 - Platform: Cloudflare Pages (static), build `npm run build`, output `dist`, production branch `main`
 - Deploy manual: `npx wrangler pages deploy dist --project-name embrilo-public --branch main`
+- Status: ✅ Live di https://embrilo-public.pages.dev (proyek Pages `embrilo-public`, branch `main`)
 - Proyek ini **terpisah** dari proyek Pages `embrilo-os` (internal). Jangan gunakan konfigurasi atau secret internal di sini.
 
 ## Dokumentasi
