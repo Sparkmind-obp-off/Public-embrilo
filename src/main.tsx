@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, ChevronDown, CirclePlay, Clapperboard, Layers3, Menu, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
+import { createRoot } from "react-dom/client";
+import { ArrowDownRight, ArrowUpRight, Check, ChevronDown, CirclePlay, Clapperboard, Layers3, Menu, ShieldCheck, Sparkles, WandSparkles, X } from "lucide-react";
 import "./styles.css";
 
 const services = [
@@ -87,3 +88,8 @@ function App() {
 }
 
 export default App;
+
+
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("Root element not found");
+createRoot(rootElement).render(<App />);
