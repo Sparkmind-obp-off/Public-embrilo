@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, Info, RotateCcw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, ArrowUpRight, Check, Copy, Download, Info, LogIn, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { SectionLabel } from "../components/Layout";
 import {
   briefSteps,
@@ -18,7 +18,46 @@ import {
   type BriefField,
 } from "../lib/brief";
 import { serviceByCode, services } from "../lib/content";
-import { Link, usePageMeta } from "../lib/router";
+import { Link, useRouter, usePageMeta } from "../lib/router";
+import { useAuthState } from "../auth/context";
+import { apiFetch, useConfig, type ApiErrorBody } from "../lib/config";
+
+const DRAFT_KEY = "embrilo:brief-draft";
+const newIdempotencyKey = () =>
+  `brief-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`}`;
+
+/** Restores a draft saved right before the visitor went to sign in (same tab only). */
+function takeDraft(): BriefData | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(DRAFT_KEY);
+    const parsed = JSON.parse(raw) as Partial<BriefData>;
+    return { ...emptyBrief, ...parsed, platforms: Array.isArray(parsed.platforms) ? parsed.platforms : [] };
+  } catch {
+    return null;
+  }
+}
+
+type SubmitState =
+  | { kind: "idle" }
+  | { kind: "sending" }
+  | { kind: "sent"; ref: string }
+  | { kind: "error"; message: string; details?: string[] };
+
+function submitErrorMessage(status: number, json: unknown): { message: string; details?: string[] } {
+  const body = json as ApiErrorBody | null;
+  const code = body?.error?.code;
+  if (status === 401) return { message: "Sesi berakhir. Silakan masuk kembali, lalu kirim ulang." };
+  if (code === "email_not_verified") return { message: "Verifikasi email akunmu terlebih dahulu, lalu kirim ulang." };
+  if (status === 422) {
+    const details = (body?.error?.details as Array<{ message?: string }> | undefined)?.map((d) => d.message).filter((m): m is string => Boolean(m));
+    return { message: body?.error?.message ?? "Periksa kembali isian brief.", details };
+  }
+  if (status === 429) return { message: "Terlalu banyak pengiriman dalam waktu singkat. Coba lagi beberapa menit lagi." };
+  if (status === 503) return { message: body?.error?.message ?? "Layanan sedang tidak tersedia. Brief belum terkirim; coba lagi nanti." };
+  return { message: "Brief belum terkirim karena terjadi kesalahan. Isianmu masih aman di halaman ini; coba kirim ulang." };
+}
 
 const initialService = () => {
   const code = new URLSearchParams(window.location.search).get("layanan") ?? "";
@@ -76,13 +115,21 @@ export function BriefPage() {
   usePageMeta({
     title: "Susun brief — Embrilo",
     description:
-      "Susun brief konten short-form dalam empat langkah: produk, audiens, arah konten, dan tinjauan. Ringkasan bisa disalin atau diunduh. Tidak ada data yang dikirim.",
+      "Susun brief konten short-form dalam empat langkah: produk, audiens, arah konten, dan tinjauan. Kirim sebagai permintaan penawaran, atau simpan ringkasannya.",
   });
 
-  const [data, setData] = useState<BriefData>(() => ({ ...emptyBrief, service: initialService() }));
+  const [restored] = useState(() => takeDraft());
+  const [data, setData] = useState<BriefData>(() => restored ?? { ...emptyBrief, service: initialService() });
   const [errors, setErrors] = useState<BriefErrors>({});
-  const [step, setStep] = useState(0);
-  const [done, setDone] = useState(false);
+  const [step, setStep] = useState(restored ? briefSteps.length - 1 : 0);
+  const [done, setDone] = useState(Boolean(restored));
+  const [submit, setSubmit] = useState<SubmitState>({ kind: "idle" });
+  const idempotencyKey = useRef(newIdempotencyKey());
+  const auth = useAuthState();
+  const config = useConfig(true);
+  const { navigate } = useRouter();
+  /** Online intake only when the server says storage + auth are live. Otherwise honest local mode. */
+  const online = Boolean(config?.intake_enabled) && auth.status !== "disabled";
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const headingRef = useRef<HTMLHeadingElement>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -95,14 +142,14 @@ export function BriefPage() {
 
   // Warn before leaving with unsaved input (data is never persisted).
   useEffect(() => {
-    if (!dirty || done) return;
+    if (!dirty || submit.kind === "sent") return;
     const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty, done]);
+  }, [dirty, submit.kind]);
 
   // Move focus to the step heading when the step changes (not on first load).
   useEffect(() => {
@@ -111,9 +158,11 @@ export function BriefPage() {
       return;
     }
     headingRef.current?.focus();
-  }, [step, done]);
+  }, [step, done, submit.kind]);
 
   const update = <K extends BriefField>(field: K, value: BriefData[K]) => {
+    idempotencyKey.current = newIdempotencyKey(); // a changed brief is a new request
+    if (submit.kind === "error") setSubmit({ kind: "idle" });
     setData((previous) => {
       const next = { ...previous, [field]: value };
       if (errors[field]) {
@@ -187,7 +236,45 @@ export function BriefPage() {
     URL.revokeObjectURL(url);
   };
 
+  const sendBrief = async () => {
+    if (auth.status !== "signed_in" || !config || submit.kind === "sending") return;
+    setSubmit({ kind: "sending" });
+    try {
+      const token = await auth.getToken();
+      if (!token) {
+        setSubmit({ kind: "error", message: "Sesi berakhir. Silakan masuk kembali, lalu kirim ulang." });
+        return;
+      }
+      const { response, json } = await apiFetch("/api/v1/quote-requests", token, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey.current },
+        body: JSON.stringify({ brief: data, terms_version: config.terms_version }),
+      });
+      const ref = (json as { public_ref?: unknown } | null)?.public_ref;
+      // Success is shown ONLY after the server confirms persistence (201 new / 200 idempotent replay).
+      if ((response.status === 201 || response.status === 200) && typeof ref === "string") {
+        setSubmit({ kind: "sent", ref });
+        return;
+      }
+      setSubmit({ kind: "error", ...submitErrorMessage(response.status, json) });
+    } catch {
+      // Same idempotency key is kept, so a retry cannot create a duplicate request.
+      setSubmit({ kind: "error", message: "Koneksi terputus sebelum brief terkonfirmasi. Isianmu masih aman; tekan kirim lagi." });
+    }
+  };
+
+  const signInToSend = () => {
+    try {
+      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch {
+      /* storage unavailable: user can still copy the summary first */
+    }
+    navigate("/masuk?next=/brief");
+  };
+
   const reset = () => {
+    idempotencyKey.current = newIdempotencyKey();
+    setSubmit({ kind: "idle" });
     setData({ ...emptyBrief });
     setErrors({});
     setStep(0);
@@ -215,16 +302,31 @@ export function BriefPage() {
           <h1 id="brief-title">Susun brief kontenmu.</h1>
           <p className="lede">Empat langkah singkat untuk merapikan kebutuhan konten menjadi brief yang jelas.</p>
 
-          <div className="notice notice-strong" role="note">
-            <Info size={18} aria-hidden="true" />
-            <div>
-              <strong>Pengiriman online belum aktif.</strong>
-              <p>
-                Formulir ini berjalan di browsermu saja. Tidak ada data yang dikirim atau disimpan. Di akhir, kamu bisa
-                menyalin atau mengunduh ringkasan brief.
-              </p>
+          {!config ? (
+            <p className="muted" role="status">Memeriksa ketersediaan pengiriman…</p>
+          ) : online ? (
+            <div className="notice notice-strong notice-online" role="note">
+              <Info size={18} aria-hidden="true" />
+              <div>
+                <strong>Brief dikirim sebagai permintaan penawaran.</strong>
+                <p>
+                  Kirim setelah masuk dengan email terverifikasi. Belum ada tagihan: harga dan lingkup final kami kirim
+                  setelah brief ditinjau.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="notice notice-strong" role="note">
+              <Info size={18} aria-hidden="true" />
+              <div>
+                <strong>Pengiriman online belum aktif.</strong>
+                <p>
+                  Formulir ini berjalan di browsermu saja. Tidak ada data yang dikirim atau disimpan. Di akhir, kamu bisa
+                  menyalin atau mengunduh ringkasan brief.
+                </p>
+              </div>
+            </div>
+          )}
 
           {!done && (
             <ol className="stepper" aria-label="Langkah penyusunan brief">
@@ -254,20 +356,78 @@ export function BriefPage() {
         </aside>
 
         <div className="brief-card">
-          {done ? (
+          {submit.kind === "sent" ? (
             <div className="brief-done">
               <h2 ref={headingRef} tabIndex={-1}>
-                Ringkasan brief siap.
+                Brief terkirim.
               </h2>
               <p className="brief-done-lede" role="status">
-                Brief sudah lengkap dan tersusun. Karena pengiriman online belum aktif, <strong>brief ini belum dikirim
-                ke Embrilo</strong>. Simpan ringkasannya dengan menyalin atau mengunduh.
+                Brief sudah tersimpan di Embrilo dengan nomor <strong className="ref-chip">{submit.ref}</strong>. Ini
+                permintaan penawaran — belum ada tagihan dan pengerjaan belum dimulai.
               </p>
+              <ol className="next-steps">
+                <li>Tim Embrilo meninjau brief dan menghubungimu bila ada yang perlu diperjelas.</li>
+                <li>Kamu menerima penawaran tertulis: lingkup, harga, waktu, dan jumlah revisi.</li>
+                <li>Pengerjaan dimulai hanya setelah penawaran kamu setujui.</li>
+              </ol>
+              <div className="brief-actions">
+                <Link to={`/akun/permintaan/${submit.ref}`} className="button button-primary">
+                  Lihat status <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
+                <button type="button" className="button button-text" onClick={reset}>
+                  <RotateCcw size={16} aria-hidden="true" /> Susun brief lain
+                </button>
+              </div>
+            </div>
+          ) : done ? (
+            <div className="brief-done">
+              <h2 ref={headingRef} tabIndex={-1}>
+                {online ? "Brief siap dikirim." : "Ringkasan brief siap."}
+              </h2>
+              {online ? (
+                <p className="brief-done-lede" role="status">
+                  Periksa ringkasan di bawah. <strong>Brief belum terkirim</strong> sampai kamu menekan tombol kirim dan
+                  Embrilo mengonfirmasinya.
+                </p>
+              ) : (
+                <p className="brief-done-lede" role="status">
+                  Brief sudah lengkap dan tersusun. Karena pengiriman online belum aktif, <strong>brief ini belum dikirim
+                  ke Embrilo</strong>. Simpan ringkasannya dengan menyalin atau mengunduh.
+                </p>
+              )}
+              {online && (
+                <div className="send-panel">
+                  {auth.status === "signed_in" ? (
+                    <button type="button" className="button button-primary button-large" onClick={() => void sendBrief()} disabled={submit.kind === "sending"} aria-busy={submit.kind === "sending"}>
+                      <Send size={16} aria-hidden="true" /> {submit.kind === "sending" ? "Mengirim…" : "Kirim brief ke Embrilo"}
+                    </button>
+                  ) : auth.status === "signed_out" ? (
+                    <button type="button" className="button button-primary button-large" onClick={signInToSend}>
+                      <LogIn size={16} aria-hidden="true" /> Masuk untuk mengirim
+                    </button>
+                  ) : (
+                    <p className="muted" role="status">Memuat status login…</p>
+                  )}
+                  {auth.status === "signed_out" && <p className="muted">Isian brief disimpan sementara di tab ini dan dipulihkan setelah kamu masuk.</p>}
+                  {submit.kind === "error" && (
+                    <div className="error-summary" role="alert">
+                      <strong>{submit.message}</strong>
+                      {submit.details && submit.details.length > 0 && (
+                        <ul>
+                          {submit.details.map((d) => (
+                            <li key={d}>{d}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <pre className="summary-box" tabIndex={0} aria-label="Ringkasan brief">
                 {summary}
               </pre>
               <div className="brief-actions">
-                <button type="button" className="button button-primary" onClick={copySummary}>
+                <button type="button" className={`button ${online ? "button-ghost" : "button-primary"}`} onClick={copySummary}>
                   {copyState === "copied" ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
                   {copyState === "copied" ? "Tersalin" : "Salin ringkasan"}
                 </button>
@@ -285,8 +445,9 @@ export function BriefPage() {
               <div className="brief-next">
                 <h3>Langkah berikutnya</h3>
                 <p>
-                  Simpan ringkasan ini. Saat kanal pengiriman resmi Embrilo dibuka, kamu cukup menempelkan atau
-                  melampirkannya — tidak perlu menulis ulang.
+                  {online
+                    ? "Setelah terkirim, kamu bisa memantau statusnya di halaman Akun."
+                    : "Simpan ringkasan ini. Saat kanal pengiriman resmi Embrilo dibuka, kamu cukup menempelkan atau melampirkannya — tidak perlu menulis ulang."}
                 </p>
                 <button type="button" className="button button-text" onClick={reset}>
                   <RotateCcw size={16} aria-hidden="true" /> Mulai brief baru
@@ -555,7 +716,7 @@ export function BriefPage() {
                   </Link>
                 )}
                 <button type="submit" className="button button-primary">
-                  {isLast ? "Buat ringkasan brief" : "Lanjut"} <ArrowRight size={16} aria-hidden="true" />
+                  {isLast ? (online ? "Tinjau sebelum kirim" : "Buat ringkasan brief") : "Lanjut"} <ArrowRight size={16} aria-hidden="true" />
                 </button>
               </div>
             </form>

@@ -8,8 +8,22 @@
 
 export type ServiceCode = "script-pack" | "storytelling-pack" | "content-plan";
 
+/**
+ * Commercial terms. Prices are NOT approved yet (docs/embrilo-blueprint-v1/25, 27),
+ * so every offer is quote-required. The server treats this file as the
+ * authoritative offer snapshot; browser-supplied prices are always ignored.
+ */
+export type Pricing = { mode: "quote" } | { mode: "fixed"; amount: number; currency: "IDR" };
+
 export interface Service {
   code: ServiceCode;
+  /** Code understood by Embrilo OS connector (docs/09-connector-contract.md in OS repo). */
+  osServiceCode: "SCRIPT_PACK" | "PRODUCT_STORY" | "CONTENT_CALENDAR";
+  offerVersion: string;
+  pricing: Pricing;
+  /** Proposed scope shown to customers; confirmed in the written quote. */
+  proposedScope: string;
+  revisionRounds: number;
   number: string;
   title: string;
   summary: string;
@@ -22,6 +36,11 @@ export interface Service {
 export const services: Service[] = [
   {
     code: "script-pack",
+    osServiceCode: "SCRIPT_PACK",
+    offerVersion: "script-pack@2026-10",
+    pricing: { mode: "quote" },
+    proposedScope: "Usulan awal: 5 skrip siap rekam untuk satu produk atau kampanye.",
+    revisionRounds: 2,
     number: "01",
     title: "Paket skrip video pendek",
     summary:
@@ -38,6 +57,11 @@ export const services: Service[] = [
   },
   {
     code: "storytelling-pack",
+    osServiceCode: "PRODUCT_STORY",
+    offerVersion: "storytelling-pack@2026-10",
+    pricing: { mode: "quote" },
+    proposedScope: "Usulan awal: 3 sudut cerita, pesan utama, panduan tone, dan 2 contoh skrip untuk satu produk.",
+    revisionRounds: 2,
     number: "02",
     title: "Paket storytelling produk",
     summary:
@@ -54,6 +78,11 @@ export const services: Service[] = [
   },
   {
     code: "content-plan",
+    osServiceCode: "CONTENT_CALENDAR",
+    offerVersion: "content-plan@2026-10",
+    pricing: { mode: "quote" },
+    proposedScope: "Usulan awal: 12 ide konten untuk 4 minggu (3 per minggu) beserta kalender CSV.",
+    revisionRounds: 2,
     number: "03",
     title: "Rencana konten mingguan",
     summary:

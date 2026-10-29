@@ -35,7 +35,13 @@ export function RouterProvider({ children }: { children: ReactNode }) {
   const [navKey, setNavKey] = useState(0);
 
   useEffect(() => {
+    // Only react to real location changes. Hash-only changes (e.g. Clerk's hash routing
+    // inside the sign-in widget) must not remount the current page.
+    let last = window.location.pathname + window.location.search;
     const onPop = () => {
+      const current = window.location.pathname + window.location.search;
+      if (current === last) return;
+      last = current;
       setPath(normalise(window.location.pathname));
       setNavKey((key) => key + 1);
     };

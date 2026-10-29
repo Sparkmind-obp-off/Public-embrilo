@@ -102,6 +102,10 @@ export function ServicesPage() {
               <dd className="status status-live">Tersedia</dd>
             </div>
             <div>
+              <dt>Masuk dengan email atau Google</dt>
+              <dd className="status status-soon">Uji coba</dd>
+            </div>
+            <div>
               <dt>Pengiriman brief online</dt>
               <dd className="status status-soon">Belum aktif</dd>
             </div>
@@ -254,18 +258,30 @@ export function PrivacyPage() {
       <section className="section section-tight">
         <div className="container prose">
           <LegalDraftNotice />
-          <h2>Data yang kamu ketik di penyusun brief</h2>
+          <h2>Akun</h2>
           <p>
-            Penyusun brief berjalan sepenuhnya di browsermu. Isinya <strong>tidak dikirim</strong> ke server Embrilo dan{" "}
-            <strong>tidak disimpan</strong> oleh website ini. Saat kamu menutup atau memuat ulang halaman, isian akan hilang
-            kecuali kamu sudah menyalin atau mengunduh ringkasannya.
+            Login dikelola oleh <strong>Clerk</strong> (penyedia layanan autentikasi). Saat kamu masuk dengan email atau
+            Google, Clerk memproses alamat email dan data sesi untuk memverifikasi identitasmu. Embrilo menyimpan ID akun
+            dari Clerk, alamat email, dan status verifikasinya. Kami tidak menerima password Google-mu. Membuat akun tidak
+            mendaftarkanmu ke email promosi.
+          </p>
+          <h2>Brief yang kamu kirim</h2>
+          <p>
+            Jika pengiriman online aktif dan kamu menekan tombol kirim, isi brief disimpan di server Embrilo bersama akunmu
+            agar bisa ditinjau dan kamu bisa melihat statusnya. Brief hanya dapat dilihat oleh akunmu dan tim Embrilo.
+            Sebelum dikirim, penyusun brief berjalan di browsermu saja; draf disimpan sementara di tab yang sama hanya
+            saat kamu beralih ke halaman masuk.
+          </p>
+          <p>
+            Masa simpan data dan cara meminta penghapusan akan ditetapkan dalam versi final halaman ini. Sementara itu,
+            permintaan penghapusan dapat disampaikan melalui kanal kontak resmi Embrilo.
           </p>
           <h2>Pelacakan dan cookie</h2>
           <p>Website ini tidak memasang cookie pelacakan atau skrip analitik pihak ketiga.</p>
           <h2>Layanan pihak ketiga</h2>
           <p>
-            Font dan seluruh aset website disajikan dari domain ini sendiri, tanpa memuat skrip pihak ketiga. Hosting
-            disediakan oleh Cloudflare.
+            Font dan aset website disajikan dari domain ini sendiri. Skrip pihak ketiga hanya dimuat di halaman masuk, akun,
+            dan brief, yaitu skrip login dari Clerk. Hosting dan penyimpanan disediakan oleh Cloudflare.
           </p>
           <h2>Jangan kirim data sensitif</h2>
           <p>

@@ -40,6 +40,30 @@ Cloudflare Pages menyajikan `index.html` untuk path yang tidak dikenal (SPA fall
 - Halaman privasi & ketentuan adalah draf dan perlu tinjauan hukum sebelum menerima data pelanggan.
 - Canonical URL dan structured data belum dipasang sampai domain produksi final ditetapkan.
 
+## Backend (v0.3) — status jujur per 2026-10-29
+| Komponen | Status | Catatan |
+|---|---|---|
+| Pages Functions `/api/*` (Hono) | ✅ Live | `functions/api/[[path]].ts` → `server/app.ts` |
+| Login Clerk (email terverifikasi + Google) | ⚠️ Development instance | `pk_test`/`sk_test`. Untuk production: buat Clerk production instance + domain sendiri, ganti `CLERK_PUBLISHABLE_KEY` & secret `CLERK_SECRET_KEY`, perbarui CSP `_headers` |
+| Verifikasi sesi server-side | ✅ | `@clerk/backend` `verifyToken` + `authorizedParties`; gagal = 401 |
+| Penyimpanan brief (D1) | ⛔ BLOCKED | Akun Cloudflare mencapai batas D1 (10). Tanpa binding `DB`, UI tetap mode lokal & menyatakannya |
+| Konektor ke Embrilo OS (HMAC v1) | ⛔ Belum dikonfigurasi | Butuh `OS_CONNECTOR_URL` + `CONNECTOR_HMAC_SECRET` yang sama dengan OS |
+| Duitku Pop (production) | ⛔ BLOCKED | Kredensial ditolak server production Duitku (`Merchant Not Found`). Kill switch `PAYMENTS_ENABLED=false`. Tidak ada endpoint checkout aktif, tidak ada tagihan yang bisa dibuat |
+
+### API
+`GET /api/v1/health`, `GET /api/v1/config`, `GET /api/v1/catalog` (publik) ·
+`GET /api/v1/me`, `POST /api/v1/quote-requests` (Idempotency-Key wajib), `GET /api/v1/quote-requests[/:ref]` (Bearer Clerk) ·
+`POST /api/v1/payment-callbacks/duitku` (HMAC resmi + cek ulang `transactionStatus`, idempotent).
+
+### Secrets (Cloudflare Pages, tidak pernah di repo)
+`CLERK_SECRET_KEY`, `DUITKU_MERCHANT_CODE`, `DUITKU_API_KEY`, (nanti) `CONNECTOR_HMAC_SECRET`. Lokal: `.dev.vars` (gitignored).
+
+### Mengaktifkan penyimpanan (setelah ada slot D1)
+```bash
+npx wrangler d1 create embrilo-public-production   # salin database_id ke wrangler.jsonc (binding "DB")
+npx wrangler d1 migrations apply embrilo-public-production --remote
+```
+
 ## Langkah pengembangan berikutnya
 1. Implementasi `POST /v1/public/requests` server-side (Pages Functions/Hono) sesuai `docs/04-public-api-contract.md`, dengan idempotency key dan konektor terautentikasi ke Embrilo OS.
 2. Ganti langkah akhir brief dengan pengiriman sungguhan; sukses hanya setelah konfirmasi 201/replay.

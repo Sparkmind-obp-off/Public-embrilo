@@ -73,6 +73,9 @@ function SiteHeader() {
               </li>
             ))}
           </ul>
+          <Link to="/akun" className={`nav-link nav-account${path.startsWith("/akun") ? " is-active" : ""}`}>
+            Akun
+          </Link>
           <Link to="/brief" className="button button-primary nav-cta">
             Susun brief <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
@@ -116,6 +119,9 @@ function SiteFooter() {
               ))}
               <li>
                 <Link to="/brief">Susun brief</Link>
+              </li>
+              <li>
+                <Link to="/akun">Akun</Link>
               </li>
             </ul>
           </div>

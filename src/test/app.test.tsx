@@ -94,8 +94,8 @@ describe("brief builder", () => {
     expect(screen.getByText("Langkah 1 dari 4")).toBeInTheDocument();
   });
 
-  it("completes all steps and produces a local summary without any network call", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
+  it("completes all steps and produces a local summary without submitting anything", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ intake_enabled: false, clerk_publishable_key: null }), { status: 200 }));
     const user = userEvent.setup();
     renderAt("/brief?layanan=script-pack");
 
@@ -124,7 +124,8 @@ describe("brief builder", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/belum dikirim ke Embrilo/);
     expect(screen.getByLabelText("Ringkasan brief")).toHaveTextContent(/Kopi Senja/);
     expect(screen.queryByText(/berhasil dikirim/i)).not.toBeInTheDocument();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    const writes = fetchSpy.mock.calls.filter(([, init]) => (init?.method ?? "GET").toUpperCase() !== "GET");
+    expect(writes).toHaveLength(0);
     fetchSpy.mockRestore();
   });
 });

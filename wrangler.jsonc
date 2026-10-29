@@ -1,8 +1,24 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Public Embrilo website — static SPA on Cloudflare Pages.
-  // Separate from the internal "embrilo-os" project; no bindings, no secrets.
+  // Public Embrilo website: static SPA + Pages Functions (/api/*) on Cloudflare Pages.
+  // Separate from the internal "embrilo-os" project. Secrets are NOT stored here:
+  //   wrangler pages secret put CLERK_SECRET_KEY / DUITKU_MERCHANT_CODE / DUITKU_API_KEY --project-name embrilo-public
   "name": "embrilo-public",
-  "compatibility_date": "2024-01-01",
-  "pages_build_output_dir": "./dist"
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+  "vars": {
+    "APP_ENV": "production",
+    "PUBLIC_BASE_URL": "https://embrilo-public.pages.dev",
+    // Clerk publishable key is public by design (it ships to the browser).
+    // This is a DEVELOPMENT instance (pk_test_…) — see README "Clerk".
+    "CLERK_PUBLISHABLE_KEY": "pk_test_YW11c2luZy1sb3VzZS0yNTgwLmNsZXJrLmFjY291bnRzLmRldiQ",
+    "CLERK_AUTHORIZED_PARTIES": "https://embrilo-public.pages.dev",
+    "DUITKU_ENV": "production",
+    // Kill switch. Stays "false" until Duitku production credentials and an approved price exist.
+    "PAYMENTS_ENABLED": "false"
+  }
+  // D1 binding (DB) is intentionally absent: the account is at its D1 database limit.
+  // Add after a database exists:
+  // "d1_databases": [{ "binding": "DB", "database_name": "embrilo-public-production", "database_id": "<id>", "migrations_dir": "migrations" }]
 }

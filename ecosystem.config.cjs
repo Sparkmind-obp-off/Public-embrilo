@@ -1,15 +1,15 @@
 module.exports = {
   apps: [
     {
-      // Lightweight static preview for local QA (SPA fallback included).
-      // `npx wrangler pages dev dist` also works but needs more memory.
+      // Full stack: static SPA + Pages Functions (/api/*) + local D1 (needs a "DB" binding in wrangler.jsonc).
       name: "public-embrilo",
-      script: "npx",
-      args: "vite preview --host 0.0.0.0 --port 3000 --strictPort",
-      env: { NODE_ENV: "production" },
+      script: "bash",
+      args: ["-c", "ulimit -c 0 && npx wrangler pages dev dist --ip 0.0.0.0 --port 3000"],
+      env: { NODE_ENV: "development" },
       watch: false,
       instances: 1,
       exec_mode: "fork",
+      max_memory_restart: "600M",
     },
   ],
 };
