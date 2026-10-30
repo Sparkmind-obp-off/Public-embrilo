@@ -34,9 +34,16 @@ function Bridge({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export default function ClerkShell({ publishableKey, children }: { publishableKey: string; children: ReactNode }) {
+export default function ClerkShell({ publishableKey, proxyUrl, children }: { publishableKey: string; proxyUrl?: string | null; children: ReactNode }) {
   return (
-    <ClerkProvider publishableKey={publishableKey} localization={idID} appearance={appearance} afterSignOutUrl="/" telemetry={false}>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      proxyUrl={proxyUrl ?? undefined}
+      localization={idID}
+      appearance={appearance}
+      afterSignOutUrl="/"
+      telemetry={false}
+    >
       <Bridge>{children}</Bridge>
     </ClerkProvider>
   );

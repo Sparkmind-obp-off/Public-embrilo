@@ -103,6 +103,8 @@ export function createApp(deps: AppDeps = {}) {
   app.get("/v1/config", (c) =>
     c.json({
       clerk_publishable_key: authConfigured(c.env) ? c.env.CLERK_PUBLISHABLE_KEY : null,
+      clerk_proxy_url: c.env.CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_") && c.env.PUBLIC_BASE_URL ? `${c.env.PUBLIC_BASE_URL}/__clerk` : null,
+      canonical_origin: c.env.PUBLIC_BASE_URL ?? null,
       terms_version: TERMS_VERSION,
       intake_enabled: authConfigured(c.env) && Boolean(c.env.DB),
       payments_enabled: paymentsEnabled(c.env),

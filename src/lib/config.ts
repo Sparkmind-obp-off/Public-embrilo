@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 /** Non-secret runtime configuration served by /api/v1/config. */
 export interface PublicConfig {
   clerk_publishable_key: string | null;
+  /** Same-origin Clerk Frontend API proxy (production). */
+  clerk_proxy_url?: string | null;
+  /** Origin where sign-in works (Clerk production domain). */
+  canonical_origin?: string | null;
   terms_version: string;
   intake_enabled: boolean;
   payments_enabled: boolean;

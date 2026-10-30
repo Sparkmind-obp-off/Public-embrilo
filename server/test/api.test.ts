@@ -87,6 +87,13 @@ describe("public config", () => {
     expect(JSON.parse(text)).toMatchObject({ intake_enabled: true, payments_enabled: false });
   });
 
+  it("exposes the same-origin Clerk proxy only for production keys", async () => {
+    const dev = (await (await call("/v1/config")).json()) as { clerk_proxy_url: string | null };
+    expect(dev.clerk_proxy_url).toBeNull();
+    const live = await app.request("/api/v1/config", {}, { ...env, CLERK_PUBLISHABLE_KEY: "pk_live_x", PUBLIC_BASE_URL: "https://embrilo-public.pages.dev" });
+    expect(await live.json()).toMatchObject({ clerk_proxy_url: "https://embrilo-public.pages.dev/__clerk", canonical_origin: "https://embrilo-public.pages.dev" });
+  });
+
   it("disables intake when storage is not bound", async () => {
     const res = await app.request("/api/v1/config", {}, { ...env, DB: undefined });
     expect(await res.json()).toMatchObject({ intake_enabled: false });

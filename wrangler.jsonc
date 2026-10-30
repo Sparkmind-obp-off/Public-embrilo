@@ -11,14 +11,15 @@
     "APP_ENV": "production",
     "PUBLIC_BASE_URL": "https://embrilo-public.pages.dev",
     // Clerk publishable key is public by design (it ships to the browser).
-    // This is a DEVELOPMENT instance (pk_test_…) — see README "Clerk".
-    "CLERK_PUBLISHABLE_KEY": "pk_test_YW11c2luZy1sb3VzZS0yNTgwLmNsZXJrLmFjY291bnRzLmRldiQ",
+    // PRODUCTION instance (domain embrilo-public.pages.dev, Frontend API via same-origin proxy /__clerk).
+    "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZW1icmlsby1wdWJsaWMucGFnZXMuZGV2JA",
     "CLERK_AUTHORIZED_PARTIES": "https://embrilo-public.pages.dev,https://embrilo.biz.id",
     "DUITKU_ENV": "production",
     // Kill switch. Stays "false" until Duitku production credentials and an approved price exist.
     "PAYMENTS_ENABLED": "false"
-  }
-  // D1 binding (DB) is intentionally absent: the account is at its D1 database limit.
-  // Add after a database exists:
-  // "d1_databases": [{ "binding": "DB", "database_name": "embrilo-public-production", "database_id": "<id>", "migrations_dir": "migrations" }]
+  },
+  // Public Embrilo's own database (separate from embrilo-os-production).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "embrilo-public-production", "database_id": "39b023c1-8ba6-4473-9f2d-584f7c8ee293", "migrations_dir": "migrations" }
+  ]
 }

@@ -44,9 +44,9 @@ Cloudflare Pages menyajikan `index.html` untuk path yang tidak dikenal (SPA fall
 | Komponen | Status | Catatan |
 |---|---|---|
 | Pages Functions `/api/*` (Hono) | ✅ Live | `functions/api/[[path]].ts` → `server/app.ts` |
-| Login Clerk (email terverifikasi + Google) | ⚠️ Development instance | `pk_test`/`sk_test`. Untuk production: buat Clerk production instance + domain sendiri, ganti `CLERK_PUBLISHABLE_KEY` & secret `CLERK_SECRET_KEY`, perbarui CSP `_headers` |
+| Login Clerk (email terverifikasi + Google) | ✅ Production instance | `pk_live`, domain `embrilo-public.pages.dev`, Frontend API lewat proxy resmi `/__clerk` (`functions/__clerk/[[path]].ts`). Halaman akun di `embrilo.biz.id` dialihkan ke domain itu |
 | Verifikasi sesi server-side | ✅ | `@clerk/backend` `verifyToken` + `authorizedParties`; gagal = 401 |
-| Penyimpanan brief (D1) | ⛔ BLOCKED | Akun Cloudflare mencapai batas D1 (10). Tanpa binding `DB`, UI tetap mode lokal & menyatakannya |
+| Penyimpanan brief (D1) | ✅ `embrilo-public-production` | Migrasi 0001 diterapkan. Slot didapat dengan menghapus `test-permission-check-invalid` (kosong, tidak di-bind; backup di sandbox) |
 | Konektor ke Embrilo OS (HMAC v1) | ⛔ Belum dikonfigurasi | Butuh `OS_CONNECTOR_URL` + `CONNECTOR_HMAC_SECRET` yang sama dengan OS |
 | Duitku Pop (production) | ⛔ BLOCKED | Kredensial ditolak server production Duitku (`Merchant Not Found`). Kill switch `PAYMENTS_ENABLED=false`. Tidak ada endpoint checkout aktif, tidak ada tagihan yang bisa dibuat |
 
