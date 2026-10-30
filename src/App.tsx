@@ -5,7 +5,7 @@ import { BriefPage } from "./pages/Brief";
 import { ExamplesPage, FaqPage, NotFoundPage, PrivacyPage, ProcessPage, ServicesPage, TermsPage } from "./pages/InfoPages";
 import { RouterProvider, useRouter } from "./lib/router";
 import { AuthBoundary } from "./auth/AuthBoundary";
-import { AccountPage, RequestDetailPage, SignInPage } from "./pages/Account";
+import { AccountPage, RequestDetailPage, SignInPage, SignUpPage } from "./pages/Account";
 
 export const routes: Record<string, ComponentType> = {
   "/": HomePage,
@@ -17,6 +17,7 @@ export const routes: Record<string, ComponentType> = {
   "/privasi": PrivacyPage,
   "/ketentuan": TermsPage,
   "/masuk": SignInPage,
+  "/daftar": SignUpPage,
   "/akun": AccountPage,
 };
 

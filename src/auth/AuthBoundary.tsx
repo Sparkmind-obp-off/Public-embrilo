@@ -6,7 +6,7 @@ import { useRouter } from "../lib/router";
 const ClerkShell = lazy(() => import("./ClerkShell"));
 
 /** Routes that need identity. Clerk is only downloaded on these pages. */
-export const AUTH_ROUTE = /^\/(akun|masuk|brief)(\/|$)/;
+export const AUTH_ROUTE = /^\/(akun|masuk|daftar|brief)(\/|$)/;
 
 export function AuthBoundary({ children }: { children: ReactNode }) {
   const { path } = useRouter();

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { ClerkProvider, SignIn, useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/clerk-react";
 import { idID } from "@clerk/localizations";
 import { AuthContext, type AuthState } from "./context";
 
@@ -26,6 +26,7 @@ function Bridge({ children }: { children: ReactNode }) {
     return {
       status: "signed_in",
       email: user?.primaryEmailAddress?.emailAddress ?? null,
+      firstName: user?.firstName ?? null,
       getToken: () => getToken(),
       signOut: () => clerk.signOut({ redirectUrl: "/" }),
     };
@@ -42,6 +43,10 @@ export default function ClerkShell({ publishableKey, proxyUrl, children }: { pub
       localization={idID}
       appearance={appearance}
       afterSignOutUrl="/"
+      // Clerk's default points at the hosted Account Portal (accounts.<domain>), which cannot
+      // exist on pages.dev (404 "Deployment Not Found"). Keep every auth screen in-app.
+      signInUrl="/masuk"
+      signUpUrl="/daftar"
       telemetry={false}
     >
       <Bridge>{children}</Bridge>
@@ -49,21 +54,39 @@ export default function ClerkShell({ publishableKey, proxyUrl, children }: { pub
   );
 }
 
-/** Clerk's hosted sign-in/up UI (email + verified code, Google via Clerk social connection). */
+const panelAppearance = {
+  elements: {
+    rootBox: { width: "100%" },
+    cardBox: { width: "100%", maxWidth: "440px", boxShadow: "none" },
+    // The page already provides the h1; Clerk's own header would duplicate it.
+    header: { display: "none" },
+  },
+};
+
+const withNext = (path: string, next: string) => (next && next !== "/akun" ? `${path}?next=${encodeURIComponent(next)}` : path);
+
+/** Clerk sign-in UI (Google via Clerk social connection, or email + verified code). */
 export function SignInPanel({ redirectUrl }: { redirectUrl: string }) {
   return (
     <SignIn
       routing="hash"
       forceRedirectUrl={redirectUrl}
       signUpForceRedirectUrl={redirectUrl}
-      appearance={{
-        elements: {
-          rootBox: { width: "100%" },
-          cardBox: { width: "100%", maxWidth: "440px", boxShadow: "none" },
-          // The page already provides the h1; Clerk's own header would duplicate it.
-          header: { display: "none" },
-        },
-      }}
+      signUpUrl={withNext("/daftar", redirectUrl)}
+      appearance={panelAppearance}
+    />
+  );
+}
+
+/** Clerk sign-up UI. New accounts land on the onboarding view in /akun. */
+export function SignUpPanel({ redirectUrl }: { redirectUrl: string }) {
+  return (
+    <SignUp
+      routing="hash"
+      forceRedirectUrl={redirectUrl}
+      signInForceRedirectUrl={redirectUrl}
+      signInUrl={withNext("/masuk", redirectUrl)}
+      appearance={panelAppearance}
     />
   );
 }

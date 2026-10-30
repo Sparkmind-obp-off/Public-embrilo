@@ -4,8 +4,10 @@ import { SectionLabel } from "../components/Layout";
 import { useAuthState } from "../auth/context";
 import { apiFetch, type ApiErrorBody } from "../lib/config";
 import { Link, useRouter, usePageMeta } from "../lib/router";
+import { services } from "../lib/content";
 
 const SignInPanel = lazy(() => import("../auth/ClerkShell").then((m) => ({ default: m.SignInPanel })));
+const SignUpPanel = lazy(() => import("../auth/ClerkShell").then((m) => ({ default: m.SignUpPanel })));
 
 /** Allows only same-site relative paths as post-login destinations (no open redirects). */
 export const safeNext = (value: string | null) => (value && /^\/[a-z0-9/_-]*(\?[a-z0-9=&_-]*)?$/i.test(value) && !value.startsWith("//") ? value : "/akun");
@@ -20,11 +22,34 @@ function AuthNotice({ status }: { status: "disabled" | "loading" }) {
   );
 }
 
-export function SignInPage() {
-  usePageMeta({ title: "Masuk — Embrilo", description: "Masuk atau daftar ke Embrilo dengan email terverifikasi atau akun Google." });
+type AuthMode = "sign-in" | "sign-up";
+
+const AUTH_COPY: Record<AuthMode, { title: string; meta: string; lede: string; swapText: string; swapLabel: string; swapTo: string }> = {
+  "sign-in": {
+    title: "Masuk ke Embrilo.",
+    meta: "Masuk — Embrilo",
+    lede: "Gunakan akun Google atau email. Akun dipakai untuk mengirim brief dan melihat status permintaanmu.",
+    swapText: "Belum punya akun?",
+    swapLabel: "Daftar gratis",
+    swapTo: "/daftar",
+  },
+  "sign-up": {
+    title: "Buat akun Embrilo.",
+    meta: "Daftar — Embrilo",
+    lede: "Cara tercepat: daftar dengan Google. Kamu juga bisa memakai email dengan kode verifikasi.",
+    swapText: "Sudah punya akun?",
+    swapLabel: "Masuk",
+    swapTo: "/masuk",
+  },
+};
+
+function AuthPage({ mode }: { mode: AuthMode }) {
+  const copy = AUTH_COPY[mode];
+  usePageMeta({ title: copy.meta, description: "Masuk atau daftar ke Embrilo dengan akun Google atau email terverifikasi." });
   const auth = useAuthState();
   const { navigate } = useRouter();
   const next = safeNext(new URLSearchParams(window.location.search).get("next"));
+  const swapHref = next !== "/akun" ? `${copy.swapTo}?next=${encodeURIComponent(next)}` : copy.swapTo;
 
   useEffect(() => {
     if (auth.status === "signed_in") navigate(next);
@@ -35,18 +60,26 @@ export function SignInPage() {
       <div className="container auth-grid">
         <div>
           <SectionLabel>Akun</SectionLabel>
-          <h1 id="signin-title">Masuk ke Embrilo.</h1>
-          <p className="lede">Gunakan email atau akun Google. Akun dipakai untuk mengirim brief dan melihat status permintaanmu.</p>
+          <h1 id="signin-title">{copy.title}</h1>
+          <p className="lede">{copy.lede}</p>
+          <ol className="journey-mini" aria-label="Setelah masuk">
+            <li><strong>1.</strong> Masuk atau daftar (gratis).</li>
+            <li><strong>2.</strong> Susun brief di halaman Brief.</li>
+            <li><strong>3.</strong> Pantau status permintaan di Akun.</li>
+          </ol>
           <ul className="check-list auth-points">
-            <li>Email harus diverifikasi sebelum brief bisa dikirim.</li>
+            <li>Email harus terverifikasi sebelum brief bisa dikirim. Akun Google sudah terverifikasi otomatis.</li>
             <li>Kami tidak mendaftarkanmu ke email promosi.</li>
             <li>Kami tidak pernah meminta password media sosial atau kode OTP.</li>
           </ul>
+          <p className="auth-swap">
+            {copy.swapText} <Link to={swapHref}>{copy.swapLabel}</Link>
+          </p>
         </div>
         <div className="auth-card">
           {auth.status === "signed_out" ? (
-            <Suspense fallback={<p className="muted">Memuat formulir masuk…</p>}>
-              <SignInPanel redirectUrl={next} />
+            <Suspense fallback={<p className="muted">Memuat formulir…</p>}>
+              {mode === "sign-in" ? <SignInPanel redirectUrl={next} /> : <SignUpPanel redirectUrl={next} />}
             </Suspense>
           ) : auth.status === "signed_in" ? (
             <p role="status">Kamu sudah masuk. Mengalihkan…</p>
@@ -58,6 +91,9 @@ export function SignInPage() {
     </section>
   );
 }
+
+export const SignInPage = () => <AuthPage mode="sign-in" />;
+export const SignUpPage = () => <AuthPage mode="sign-up" />;
 
 interface RequestItem {
   public_ref: string;
@@ -107,7 +143,55 @@ function SignedOutPrompt({ next }: { next: string }) {
     <div className="brief-card">
       <p>Masuk untuk melihat permintaan yang pernah kamu kirim.</p>
       <Link to={`/masuk?next=${encodeURIComponent(next)}`} className="button button-primary">
-        Masuk atau daftar
+        Masuk
+      </Link>
+      <Link to={`/daftar?next=${encodeURIComponent(next)}`} className="button button-ghost">
+        Daftar gratis
+      </Link>
+    </div>
+  );
+}
+
+const ONBOARDING_STEPS = [
+  { title: "Akun dibuat", text: "Kamu sudah masuk. Email akunmu dipakai untuk kabar status permintaan.", done: true },
+  { title: "Pilih layanan", text: "Skrip video pendek, storytelling produk, rencana konten mingguan, atau konsultasi jika belum yakin.", done: false },
+  { title: "Susun brief (±5 menit)", text: "Ceritakan produk, audiens, tujuan, dan platform. Hanya fakta yang sudah kamu verifikasi.", done: false },
+  { title: "Tinjauan & penawaran", text: "Tim meninjau brief lalu mengirim lingkup dan harga tertulis. Belum ada tagihan sebelum kamu setuju.", done: false },
+];
+
+function Onboarding({ name }: { name: string | null }) {
+  return (
+    <div className="onboarding" aria-labelledby="onboarding-title">
+      <h2 id="onboarding-title" className="detail-h2">{name ? `Selamat datang, ${name}.` : "Selamat datang di Embrilo."}</h2>
+      <p className="muted">Belum ada permintaan. Ini langkah berikutnya:</p>
+      <ol className="onboarding-steps">
+        {ONBOARDING_STEPS.map((step, index) => (
+          <li key={step.title} className={step.done ? "is-done" : index === 1 ? "is-current" : ""}>
+            <span className="onboarding-dot" aria-hidden="true">{step.done ? "✓" : index + 1}</span>
+            <div>
+              <strong>{step.title}</strong>
+              {step.done && <span className="visually-hidden"> (selesai)</span>}
+              <p>{step.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="onboarding-categories" aria-label="Pilih layanan">
+        {services.map((service) => (
+          <Link key={service.code} to={`/brief?layanan=${service.code}`} className="category-card">
+            <span className="service-number" aria-hidden="true">{service.number}</span>
+            <strong>{service.title}</strong>
+            <span className="muted">{service.forWho}</span>
+          </Link>
+        ))}
+        <Link to="/brief?layanan=diskusi" className="category-card category-card-alt">
+          <span className="service-number" aria-hidden="true">?</span>
+          <strong>Belum yakin? Konsultasi</strong>
+          <span className="muted">Ceritakan kebutuhanmu, kami arahkan ke layanan yang cocok.</span>
+        </Link>
+      </div>
+      <Link to="/brief" className="button button-primary">
+        Susun brief pertama <ArrowUpRight size={16} aria-hidden="true" />
       </Link>
     </div>
   );
@@ -159,12 +243,7 @@ export function AccountPage() {
                 ))}
               </ul>
             ) : (
-              <div className="brief-card empty-state">
-                <p>Belum ada permintaan. Mulai dengan menyusun brief pertamamu.</p>
-                <Link to="/brief" className="button button-primary">
-                  Susun brief <ArrowUpRight size={16} aria-hidden="true" />
-                </Link>
-              </div>
+              <Onboarding name={auth.firstName ?? null} />
             )}
           </>
         ) : auth.status === "signed_out" ? (

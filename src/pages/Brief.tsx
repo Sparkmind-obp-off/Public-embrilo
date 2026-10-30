@@ -61,7 +61,7 @@ function submitErrorMessage(status: number, json: unknown): { message: string; d
 
 const initialService = () => {
   const code = new URLSearchParams(window.location.search).get("layanan") ?? "";
-  return serviceByCode(code) ? code : "";
+  return serviceByCode(code) || code === "diskusi" ? code : "";
 };
 
 function Field({

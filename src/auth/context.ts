@@ -8,7 +8,7 @@ export type AuthState =
   | { status: "disabled" }
   | { status: "loading" }
   | { status: "signed_out" }
-  | { status: "signed_in"; email: string | null; getToken: () => Promise<string | null>; signOut: () => Promise<void> };
+  | { status: "signed_in"; email: string | null; firstName?: string | null; getToken: () => Promise<string | null>; signOut: () => Promise<void> };
 
 export const AuthContext = createContext<AuthState>({ status: "disabled" });
 export const useAuthState = () => useContext(AuthContext);
