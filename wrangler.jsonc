@@ -13,7 +13,7 @@
     // Clerk publishable key is public by design (it ships to the browser).
     // This is a DEVELOPMENT instance (pk_test_…) — see README "Clerk".
     "CLERK_PUBLISHABLE_KEY": "pk_test_YW11c2luZy1sb3VzZS0yNTgwLmNsZXJrLmFjY291bnRzLmRldiQ",
-    "CLERK_AUTHORIZED_PARTIES": "https://embrilo-public.pages.dev",
+    "CLERK_AUTHORIZED_PARTIES": "https://embrilo-public.pages.dev,https://embrilo.biz.id",
     "DUITKU_ENV": "production",
     // Kill switch. Stays "false" until Duitku production credentials and an approved price exist.
     "PAYMENTS_ENABLED": "false"

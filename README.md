@@ -50,6 +50,16 @@ Cloudflare Pages menyajikan `index.html` untuk path yang tidak dikenal (SPA fall
 | Konektor ke Embrilo OS (HMAC v1) | ⛔ Belum dikonfigurasi | Butuh `OS_CONNECTOR_URL` + `CONNECTOR_HMAC_SECRET` yang sama dengan OS |
 | Duitku Pop (production) | ⛔ BLOCKED | Kredensial ditolak server production Duitku (`Merchant Not Found`). Kill switch `PAYMENTS_ENABLED=false`. Tidak ada endpoint checkout aktif, tidak ada tagihan yang bisa dibuat |
 
+### Clerk production — temuan 2026-10-30
+- Key `pk_live` terikat ke domain **embrilo-public.pages.dev**. Clerk production butuh CNAME di domain tersebut
+  (`clerk.`, `accounts.`, `clkmail.`, DKIM). `pages.dev` milik Cloudflare sehingga CNAME **tidak bisa** dibuat:
+  Frontend API `clerk.embrilo-public.pages.dev` membalas 404. Key live belum dipasang agar login tidak rusak.
+- Perbaikan: ubah domain production Clerk ke **embrilo.biz.id** (Clerk Dashboard → Domains, atau Backend API
+  `POST /v1/instance/change_domain`), tambahkan CNAME yang ditampilkan Clerk di zona DNS `embrilo.biz.id`,
+  lalu ganti `CLERK_PUBLISHABLE_KEY` (key baru), secret `CLERK_SECRET_KEY`, dan host Clerk di `public/_headers`.
+- Google Sign-In di Clerk production wajib memakai OAuth client milik sendiri (Google Cloud) dengan redirect URI
+  persis seperti yang ditampilkan Clerk.
+
 ### API
 `GET /api/v1/health`, `GET /api/v1/config`, `GET /api/v1/catalog` (publik) ·
 `GET /api/v1/me`, `POST /api/v1/quote-requests` (Idempotency-Key wajib), `GET /api/v1/quote-requests[/:ref]` (Bearer Clerk) ·
