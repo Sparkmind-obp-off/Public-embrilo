@@ -35,13 +35,19 @@ export const authConfigured = (env: Env) =>
 export const clerkSessionVerifier: SessionVerifier = async (token, env) => {
   if (!authConfigured(env)) throw new ApiError(503, "auth_not_configured", "Login belum aktif.");
   try {
-    const result = await verifyToken(token, {
+    // The public `verifyToken` export uses Clerk's legacy return shape: it resolves to the
+    // JWT payload and THROWS on any verification failure. Handle both shapes defensively.
+    const result: unknown = await verifyToken(token, {
       secretKey: env.CLERK_SECRET_KEY,
       jwtKey: env.CLERK_JWT_KEY || undefined,
       authorizedParties: authorizedParties(env),
     });
-    if (result.errors) return null;
-    const sub = (result.data as { sub?: unknown } | undefined)?.sub;
+    if (!result || typeof result !== "object") return null;
+    const record = result as { errors?: unknown; data?: unknown; sub?: unknown };
+    if (record.errors) return null;
+    const payload = (record.data && typeof record.data === "object" ? record.data : record) as { sub?: unknown; sts?: unknown };
+    if (payload.sts !== undefined && payload.sts !== "active") return null;
+    const sub = payload.sub;
     if (typeof sub !== "string" || !/^user_[A-Za-z0-9]{10,64}$/.test(sub)) return null;
     return { clerkUserId: sub };
   } catch {
